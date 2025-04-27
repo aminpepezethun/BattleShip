@@ -74,8 +74,6 @@ def main():
 
 
 
-
-
 # HINT: For multiple clients, you'd need to:
 # 1. Accept connections in a loop
 # 2. Handle each client in a separate thread
