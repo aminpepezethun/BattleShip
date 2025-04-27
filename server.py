@@ -11,38 +11,70 @@ However, if you want to support multiple clients (i.e. progress through further 
 """
 
 import socket
-from battleship import run_single_player_game_online
 import threading
+import time
+from collections import deque
+from battleship import run_two_player_game_online
 
 HOST = '127.0.0.1'
 PORT = 6000
 
-def handle_client(conn, addr):
-    print(f"[INFO] Handling client from {addr}")
+# Client queue for auto match-making
+CLIENT_QUEUE = deque()
 
-    with conn:
-        rfile = conn.makefile('r')
-        wfile = conn.makefile('w')
 
-        run_single_player_game_online(rfile, wfile)
-    print(f"[INFO] Client {addr} disconnected from server.")
+def match_making():
+    while True:
+        if len(CLIENT_QUEUE) >= 2:
+            print("[INFO] 2 clients found. Starting game session")
+
+            (conn1, addr1) = CLIENT_QUEUE.popleft()
+            (conn2, addr2) = CLIENT_QUEUE.popleft()
+
+            game_thread = threading.Thread(target=handle_game_session, args=(conn1, addr1, conn2, addr2), daemon=True)
+            game_thread.start()
+        else:
+            time.sleep(0.1)
+
+
+def handle_game_session(conn1, addr1, conn2, addr2):
+    with conn1, conn2:
+        print(f"[GAME START] Starting game between {addr1} and {addr2}")
+
+        rfile1 = conn1.makefile('r')
+        wfile1 = conn1.makefile('w')
+        rfile2 = conn2.makefile('r')
+        wfile2 = conn2.makefile('w')
+
+        run_two_player_game_online(rfile1, wfile1, rfile2, wfile2)
+
+        print(f"[GAME END] Game session ended")
+
+
+def accept_connections():
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind((HOST, PORT))
+        s.listen()
+
+        print(f"[INFO] Server listening on {HOST}:{PORT}")
+
+        while True:
+            conn, addr = s.accept()
+            print(f"[INFO] Client connected from {addr}")
+
+            CLIENT_QUEUE.append((conn, addr))
 
 
 def main():
-    print(f"[INFO] Server listening on {HOST}:{PORT}")
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    try:
-        s.bind((HOST, PORT))
-    except socket.error as e:
-        str(e)
-
-    s.listen(2)
+    threading.Thread(target=accept_connections, daemon=True).start()
+    threading.Thread(target=match_making, daemon=True).start()
 
     while True:
-        conn, addr = s.accept()
-        player_thread = threading.Thread(target=handle_client, args=(conn, addr))
-        player_thread.start()
+        time.sleep(1)
+
+
+
+
 
 # HINT: For multiple clients, you'd need to:
 # 1. Accept connections in a loop

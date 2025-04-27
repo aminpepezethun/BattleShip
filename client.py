@@ -30,42 +30,55 @@ clientNumber = 0
 def receive_messages(rfile):
     """Continuously receive and display messages from the server"""
     while running:
-        line = rfile.readline()
-        if not line:
-            print("[INFO] Server disconnected.")
-            break
+        try:
+            server_message = rfile.readline()
+            if not server_message:
+                print("[INFO] Server disconnected.")
+                break
 
-        line = line.strip()
+            line = server_message.strip()
 
-        if line == "GRID":
-            print("\n[Board]")
-            while True:
-                board_line = rfile.readline()
-                if not board_line or board_line.strip() == "":
-                    break
-                print(board_line.strip())
-        else:
-            print(line)
+            # Process and display message
+            if line == "GRID":
+                print("\n[Board]")
+                while True:
+                    board_line = rfile.readline()
+                    if not board_line or board_line.strip() == "":
+                        break
+                    print(board_line.strip())
+            else:
+                print(line)
+        except Exception as e:
+            print(f"[ERROR] Error receiving message: {e}")
 
 
 def main():
-    global running
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
+        print("[INFO] Client connected to server")
+
         rfile = s.makefile('r')
         wfile = s.makefile('w')
 
+        # One thread for receiving message
         receiver_thread = threading.Thread(target=receive_messages, args=(rfile,))
         receiver_thread.start()
 
+        # Main thread handles user input
         try:
             while True:
-                user_input = input(">> ")
+                user_input = input(">>  Enter your moves (e.g. B5):")
+                if user_input.strip() == "":
+                    continue
                 wfile.write(user_input + '\n')
                 wfile.flush()
 
         except KeyboardInterrupt:
             print("\n[INFO] Client exiting.")
+            global running
+            running = False
+            receiver_thread.join()
+
 
 # HINT: A better approach would be something like:
 #
