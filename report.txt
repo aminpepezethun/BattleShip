@@ -1,0 +1,9 @@
+Tier 1:
+1.1 . Concurrency Issues: fixed using 2 threads
+1.2. Servers and Two Clients: allowing connection from 2 players
+1.3. Game Basic Flow:
+    allowing 2 players firing at each other
+    report hit or miss outcomes and detect when a ship is fully sunk
+    end the game when one player has all ship sunks
+    end the game when one player forfeit
+ 1.4. Simple Client/Server Message Exchange:
