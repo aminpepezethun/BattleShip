@@ -13,7 +13,7 @@ import threading
 HOST = '127.0.0.1'
 PORT = 6000
 
-running = True
+
 
 clientNumber = 0
 
@@ -29,15 +29,14 @@ clientNumber = 0
 
 def receive_messages(rfile):
     """Continuously receive and display messages from the server"""
-    while running:
+    while True:
         try:
-            server_message = rfile.readline()
-            if not server_message:
+            line = rfile.readline()
+            if not line:
                 print("[INFO] Server disconnected.")
                 break
 
-            line = server_message.strip()
-
+            line = line.strip()
             # Process and display message
             if line == "GRID":
                 print("\n[Board]")
@@ -55,7 +54,6 @@ def receive_messages(rfile):
 def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((HOST, PORT))
-        print("[INFO] Client connected to server")
 
         rfile = s.makefile('r')
         wfile = s.makefile('w')
@@ -67,17 +65,23 @@ def main():
         # Main thread handles user input
         try:
             while True:
-                user_input = input(">>  Enter your moves (e.g. B5):")
-                if user_input.strip() == "":
+                user_input = input(">> ").strip()
+                if user_input == "":
                     continue
+                elif user_input == "quit":
+                    print("Thanks for playing. Goodbye")
+                    running = False
+                    break
                 wfile.write(user_input + '\n')
                 wfile.flush()
 
         except KeyboardInterrupt:
             print("\n[INFO] Client exiting.")
-            global running
-            running = False
-            receiver_thread.join()
+        except Exception as e:
+            if running:
+                print(f"\n[INFO] Client disconnect: {e}")
+        finally:
+            s.close()
 
 
 # HINT: A better approach would be something like:

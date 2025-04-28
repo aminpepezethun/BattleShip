@@ -334,33 +334,36 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
     def recv(rfile):
         return rfile.readline().strip()
 
-    def validate_coordinate():
-        return False
 
     # Boards for each player
     board1 = Board(BOARD_SIZE)
     board2 = Board(BOARD_SIZE)
 
-    send(p1_wfile, "Waiting for ship placement")
-    send(p2_wfile, "Waiting for ship placement")
+    # send(p1_wfile, "Waiting for ship placement")
+    # send(p2_wfile, "Waiting for ship placement")
+    #
+    # # Ask for their ship placement
+    # # The prompt will last for 30 seconds and if the user does not choose one, automatically choose random()
+    # send(p1_wfile, "Place ships manually (M) or randomly (R)? [M/R]: ")
+    # send(p2_wfile, "Place ships manually (M) or randomly (R)? [M/R]: ")
+    #
+    # choice1 = recv(p1_rfile).strip().upper()
+    # if choice1 == 'M':
+    #     board1.place_ships_manually_two_player(p1_rfile, p1_wfile)
+    # else:
+    #     board1.place_ships_randomly()
+    #
+    # choice2 = recv(p2_rfile).strip().upper()
+    #
+    # if choice2 == 'M':
+    #     board2.place_ships_manually_two_player(p2_rfile, p2_wfile)
+    # else:
+    #     board2.place_ships_randomly()
 
-    # Ask for their ship placement
-    # The prompt will last for 30 seconds and if the user does not choose one, automatically choose random()
-    send(p1_wfile, "Place ships manually (M) or randomly (R)? [M/R]: ")
-    send(p2_wfile, "Place ships manually (M) or randomly (R)? [M/R]: ")
-
-    choice1 = recv(p1_rfile).strip().upper()
-    if choice1 == 'M':
-        board1.place_ships_manually_two_player(p1_rfile, p1_wfile)
-    else:
-        board1.place_ships_randomly()
-
-    choice2 = recv(p2_rfile).strip().upper()
-
-    if choice2 == 'M':
-        board2.place_ships_manually_two_player(p2_rfile, p2_wfile)
-    else:
-        board2.place_ships_randomly()
+    send(p1_wfile, "[INFO] Player 1: Place your ships randomly.")
+    board1.place_ships_randomly()
+    send(p2_wfile, "[INFO] Player 2: Place your ships randomly.")
+    board2.place_ships_randomly()
 
     # If the 2 players had already set up their ship, start the game
     # When player hit/miss, report to both players what just happened
@@ -371,14 +374,20 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
         if current_turn == 1:
             send(p2_wfile, "[INFO] Opponent is taking their turn.")
             send(p1_wfile, "\nYour turn! Enter coordinate to fire (e.g. b5): ")
-            send_board(p1_wfile, board2)  # show opponent public board
+            send_board(p1_wfile, board2)  # show opponent's public board
 
             guess = recv(p1_rfile)
 
             if guess.lower() == 'quit':
                 send(p1_wfile, "Thanks for playing. Goodbye.")
-                send(p2_wfile, "[INFO] Opponent quit. Waiting 60 seconds before exiting the match")
+                send(p2_wfile, "[INFO] Opponent quit. Game over")
                 return
+            elif guess.lower() == 'dpriv':
+                send_board(p1_wfile, board1.hidden_grid)
+                continue
+            elif guess.lower() == 'dpub':
+                send_board(p1_wfile, board1)
+                continue
             elif guess.lower() == 'help':
                 send(p1_wfile, INSTRUCTIONS)
                 continue
@@ -394,21 +403,26 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
 
                 if result == 'hit':
                     if sunk_name:
-                        send(p1_wfile, f"HIT! You sank the {sunk_name}!")
-                        send(p2_wfile, f"[INFO] OPPONENT HIT AT: {col}{row} ! They sank your {sunk_name}!")
+                        send(p1_wfile, f"HIT! You sank their {sunk_name}!")
+                        send_board(p1_wfile, board2)
+                        send(p2_wfile, f"[INFO] OPPONENT HIT AT: {parsed} ! They sank your {sunk_name}!")
                     else:
                         send(p1_wfile, "HIT!")
-                        send(p2_wfile, f"HIT! OPPONENT HIT AT: {col}{row}!")
+                        send_board(p1_wfile, board2)
+                        send(p2_wfile, f"HIT! OPPONENT HIT AT: {parsed} !")
                     if board2.all_ships_sunk():
+                        send_board(p1_wfile, board2)
                         send_board(p1_wfile, board2)
                         send(p1_wfile, f"Congratulations! You sank all ships in {moves_1} moves.")
                         send(p2_wfile, f"YOU LOST! DON'T GIVE UP!")
-                        return
+                        break
                 elif result == 'miss':
                     send(p1_wfile, "MISS!")
-                    send(p2_wfile, f"MISS! OPPONENT HIT AT: {col}{row}!")
+                    send_board(p1_wfile, board2)
+                    send(p2_wfile, f"MISS! OPPONENT HIT AT: {parsed}!")
                 elif result == 'already_shot':
                     send(p1_wfile, "You've already fired at that location.")
+                    send_board(p1_wfile, board2)
                     continue
             except ValueError as e:
                 send(p1_wfile, f"Invalid input: {e}")
@@ -441,11 +455,13 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
 
                 if result == 'hit':
                     if sunk_name:
-                        send(p2_wfile, f"HIT! You sank the {sunk_name}!")
-                        send(p1_wfile, f"[INFO] OPPONENT HIT AT: {col}{row} ! They sank your {sunk_name}!")
+                        send(p2_wfile, f"HIT! You sank their {sunk_name}!")
+                        send_board(p1_wfile, board2)
+                        send(p1_wfile, f"[INFO] OPPONENT HIT AT: {parsed} ! They sank your {sunk_name}!")
                     else:
                         send(p2_wfile, "HIT!")
-                        send(p1_wfile, f"HIT! OPPONENT HIT AT: {col}{row}!")
+                        send_board(p2_wfile, board1)
+                        send(p1_wfile, f"HIT! OPPONENT HIT AT: {parsed} !")
                     if board1.all_ships_sunk():
                         send_board(p2_wfile, board1)
                         send(p2_wfile, f"Congratulations! You sank all ships in {moves_2} moves.")
@@ -453,9 +469,11 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
                         return
                 elif result == 'miss':
                     send(p2_wfile, "MISS!")
-                    send(p1_wfile, f"MISS! OPPONENT HIT AT: {col}{row}!")
+                    send_board(p2_wfile, board1)
+                    send(p1_wfile, f"MISS! OPPONENT HIT AT: {parsed} !")
                 elif result == 'already_shot':
                     send(p2_wfile, "You've already fired at that location.")
+                    send_board(p2_wfile, board1)
                     continue
             except ValueError as e:
                 send(p2_wfile, f"Invalid input: {e}")
@@ -488,10 +506,10 @@ def parse_coordinate(wfile, coord_str):
     col_digits = coord_str[1:].strip()
 
     if not row_letter.isalpha() or not ('A' <= row_letter <= 'K'):
-        send(wfile, "[INFO] Row must be a letter from A-K. Please enter a valid coordinate (e.g. b5)\n")
+        send(wfile, "[INFO] Row must be a letter from A-K. Please enter a valid coordinate (e.g. B5)\n")
         return None
     if not col_digits.isdigit():
-        send(wfile, "[INFO] Column must be a digit from 0-10. Please enter a valid coordinate (e.g. b5)\n")
+        send(wfile, "[INFO] Column must be a digit from 0-10. Please enter a valid coordinate (e.g. B5)\n")
         return None
 
     col = int(col_digits)
@@ -502,7 +520,7 @@ def parse_coordinate(wfile, coord_str):
     row = ord(row_letter) - ord('A')
     col = int(col_digits) - 1  # zero-based
 
-    return (row, col)
+    return row, col
 
 
 # def run_single_player_game_locally():
