@@ -35,7 +35,7 @@ GAMES = {}
 def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
-        s.listen()
+        s.listen(10)
 
         print(f"[INFO] Server listening on {HOST}:{PORT}")
 
