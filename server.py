@@ -42,16 +42,16 @@ def handle_client(conn):
         with LOCK:
             CLIENT_QUEUE.append((rfile, wfile, client_id))
 
-def match_making():
-    with LOCK:
-        if len(CLIENT_QUEUE) >= 2:
-            p1 = CLIENT_QUEUE.popleft()
-            p2 = CLIENT_QUEUE.popleft()
-
-            threading.Thread(target=run_two_player_game_online, args=(p1[0], p1[1], p2[0], p2[1]), daemon=True).start()
-
-            print(f"[GAME] Paired {p1[3]} and {p2[3]}")
-    time.sleep(1)
+# def match_making():
+#     with LOCK:
+#         if len(CLIENT_QUEUE) >= 2:
+#             p1 = CLIENT_QUEUE.popleft()
+#             p2 = CLIENT_QUEUE.popleft()
+#
+#             threading.Thread(target=run_two_player_game_online, args=(p1[0], p1[1], p2[0], p2[1]), daemon=True).start()
+#
+#             print(f"[GAME] Paired {p1[3]} and {p2[3]}")
+#     time.sleep(1)
 
 def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
