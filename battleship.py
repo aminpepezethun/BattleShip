@@ -8,7 +8,7 @@ Contains core data structures and logic for Battleship, including:
 
 """
 
-import random
+import random as rd
 
 BOARD_SIZE = 10
 SHIPS = [
@@ -334,27 +334,39 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
     def recv(rfile):
         return rfile.readline().strip()
 
+    def place_ships_thread(rfile, wfile, board):
+        send(wfile, "Place ships manually (M) or randomly (R)? [M/R]: ")
+        send(wfile, "[INFO] 30 seconds before randomly assigned")
+        choice = recv(rfile).strip().upper()
+        if choice == 'M':
+            board.place_ships_manually_two_player(rfile, wfile)
+        elif choice == 'R':
+            board.place_ships_randomly()
+        else:
+            # write some message to inform user invalid and required them to send again.
+            send(wfile, "Invalid arguments. Please enter M (manually) or R (randomly)")
+            # ask for them again
+
 
     # Boards for each player
     board1 = Board(BOARD_SIZE)
     board2 = Board(BOARD_SIZE)
 
+    # # Send both request for player for ship placement concurrently
     # send(p1_wfile, "Waiting for ship placement")
     # send(p2_wfile, "Waiting for ship placement")
     #
     # # Ask for their ship placement
     # # The prompt will last for 30 seconds and if the user does not choose one, automatically choose random()
     # send(p1_wfile, "Place ships manually (M) or randomly (R)? [M/R]: ")
-    # send(p2_wfile, "Place ships manually (M) or randomly (R)? [M/R]: ")
-    #
     # choice1 = recv(p1_rfile).strip().upper()
     # if choice1 == 'M':
     #     board1.place_ships_manually_two_player(p1_rfile, p1_wfile)
     # else:
     #     board1.place_ships_randomly()
     #
+    # send(p2_wfile, "Place ships manually (M) or randomly (R)? [M/R]: ")
     # choice2 = recv(p2_rfile).strip().upper()
-    #
     # if choice2 == 'M':
     #     board2.place_ships_manually_two_player(p2_rfile, p2_wfile)
     # else:
