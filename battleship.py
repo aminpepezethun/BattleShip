@@ -321,6 +321,16 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
         wfile.write(msg + '\n')
         wfile.flush()
 
+    def send_hidden_board(wfile, board):
+        wfile.write("GRID\n")
+        wfile.write("  " + " ".join(str(i + 1).rjust(2) for i in range(board.size)) + '\n')
+        for r in range(board.size):
+            row_label = chr(ord('A') + r)
+            row_str = " ".join(board.hidden_grid[r][c] for c in range(board.size))
+            wfile.write(f"{row_label:2} {row_str}\n")
+        wfile.write('\n')
+        wfile.flush()
+
     def send_board(wfile, board):
         wfile.write("GRID\n")
         wfile.write("  " + " ".join(str(i + 1).rjust(2) for i in range(board.size)) + '\n')
@@ -373,8 +383,8 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
     while True:
         if current_turn == 1:
             send(p2_wfile, "[INFO] Opponent is taking their turn.")
-            send(p1_wfile, "\nYour turn! Enter coordinate to fire (e.g. b5): ")
             send_board(p1_wfile, board2)  # show opponent's public board
+            send(p1_wfile, "\nYour turn! Enter coordinate to fire (e.g. b5): ")
 
             guess = recv(p1_rfile)
 
@@ -383,7 +393,7 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
                 send(p2_wfile, "[INFO] Opponent quit. Game over")
                 return
             elif guess.lower() == 'dpriv':
-                send_board(p1_wfile, board1.hidden_grid)
+                send_hidden_board(p1_wfile, board1)
                 continue
             elif guess.lower() == 'dpub':
                 send_board(p1_wfile, board1)
@@ -431,8 +441,8 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
             current_turn = 2
         else:
             send(p1_wfile, "[INFO] Opponent is taking their turn.")
-            send(p2_wfile, "\nYour turn! Enter coordinate to fire (e.g. b5): ")
             send_board(p2_wfile, board1)  # show opponent public board
+            send(p2_wfile, "\nYour turn! Enter coordinate to fire (e.g. b5): ")
 
             guess = recv(p2_rfile)
 
@@ -440,6 +450,12 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
                 send(p2_wfile, "Thanks for playing. Goodbye.")
                 send(p1_wfile, "[INFO] Opponent quit. Waiting 60 seconds before exiting the match")
                 return
+            elif guess.lower() == 'dpriv':
+                send_hidden_board(p2_wfile, board2)
+                continue
+            elif guess.lower() == 'dpub':
+                send_board(p2_wfile, board2)
+                continue
             elif guess.lower() == 'help':
                 send(p2_wfile, INSTRUCTIONS)
                 continue

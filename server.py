@@ -42,31 +42,33 @@ def handle_client(conn):
         with LOCK:
             CLIENT_QUEUE.append((rfile, wfile, client_id))
 
-# def match_making():
-#     with LOCK:
-#         if len(CLIENT_QUEUE) >= 2:
-#             p1 = CLIENT_QUEUE.popleft()
-#             p2 = CLIENT_QUEUE.popleft()
-#
-#             threading.Thread(target=run_two_player_game_online, args=(p1[0], p1[1], p2[0], p2[1]), daemon=True).start()
-#
-#             print(f"[GAME] Paired {p1[3]} and {p2[3]}")
-#     time.sleep(1)
+def match_making():
+    with LOCK:
+        if len(CLIENT_QUEUE) >= 2:
+            p1 = CLIENT_QUEUE.popleft()
+            p2 = CLIENT_QUEUE.popleft()
+
+            threading.Thread(target=run_two_player_game_online, args=(p1[0], p1[1], p2[0], p2[1]), daemon=True).start()
+
+            print(f"[GAME] Paired {p1[3]} and {p2[3]}")
+    time.sleep(1)
 
 def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
         s.listen(10)
         print(f"[INFO] Server listening on {HOST}:{PORT}")
-        conn, addr = s.accept()
 
         while True:
+            conn, addr = s.accept()
             print(f"[INFO] New client connected from {addr}")
             client_thread = threading.Thread(
                 target=handle_client,
                 args=(conn,)
             )
             client_thread.start()
+
+
 
 
 # HINT: For multiple clients, you'd need to:
