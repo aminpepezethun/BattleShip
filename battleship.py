@@ -367,7 +367,7 @@ def run_two_player_game_online(p1_rfile, p1_wfile, p2_rfile, p2_wfile):
 
     # If the 2 players had already set up their ship, start the game
     # When player hit/miss, report to both players what just happened
-    current_turn = 1
+    current_turn = rd.randint(0,1)
     moves_1 = 0
     moves_2 = 0
     while True:
