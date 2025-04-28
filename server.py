@@ -23,14 +23,35 @@ PORT = 6000
 # Client queue for auto match-making
 CLIENT_QUEUE = deque()
 
+# Section protection
+LOCK = threading.Lock()
+
 # Store games, keys by game ID
 GAMES = {}
 
-# def handle_client(conn):
-#     while conn:
-#         rfile = conn.makefile('r')
-#         wfile = conn.makefile('w')
-#
+def send(wfile, msg):
+    wfile.write(msg + "\n")
+    wfile.flush()
+
+def handle_client(conn, addr):
+    client_id = str(uuid.uuid4())
+    while conn:
+        rfile = conn.makefile('r')
+        wfile = conn.makefile('w')
+        send(wfile, f"[INFO] Client {client_id} successfully connected to server. Waiting for other players to join")
+        with LOCK:
+            CLIENT_QUEUE.append((rfile, wfile, client_id, addr))
+
+def match_making():
+    with LOCK:
+        if len(CLIENT_QUEUE) >= 2:
+            p1 = CLIENT_QUEUE.popleft()
+            p2 = CLIENT_QUEUE.popleft()
+
+            threading.Thread(target=run_two_player_game_online, args=(p1[0], p1[1], p2[0], p2[1]), daemon=True).start()
+
+            print(f"[GAME] Paired {p1[3]} and {p2[3]}")
+    time.sleep(1)
 
 def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -38,27 +59,15 @@ def main():
         s.listen()
 
         print(f"[INFO] Server listening on {HOST}:{PORT}")
+        threading.Thread(target=match_making).start()
 
-        print("[INFO] Waiting for player 1 to connect")
-        conn1, addr1 = s.accept()
-        print(f"[INFO] Player 1 connected from {addr1}")
-
-        print("[INFO] Waiting for player 2 to connect")
-        conn2, addr2 = s.accept()
-        print(f"[INFO] Player 2 connected from {addr2}")
-
-        with conn1, conn2:
-            rfile1 = conn1.makefile('r')
-            wfile1 = conn1.makefile('w')
-            rfile2 = conn2.makefile('r')
-            wfile2 = conn2.makefile('w')
-
-            run_two_player_game_online(rfile1, wfile1, rfile2, wfile2)
-            print("[INFO] Game finished. Closing connections.")
-
-    while True:
-        time.sleep(1)
-
+        while True:
+            conn, addr = s.accept()
+            print(f"[INFO] New client connected from {addr}")
+            threading.Thread(
+                target=handle_client,
+                args=(conn, addr)
+            ).start()
 
 
 # HINT: For multiple clients, you'd need to:
